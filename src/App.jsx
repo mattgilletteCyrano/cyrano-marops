@@ -120,6 +120,8 @@ const perVideoStats = [
   { views: 1923, ctr: '4.1%', roi: '$12.7K' },
   { views: 4102, ctr: '7.8%', roi: '$31.2K' },
   { views:  873, ctr: '3.3%', roi: '$6.1K'  },
+  { views: 6218, ctr: '8.9%', roi: '$42.3K' },
+  { views: 3341, ctr: '5.1%', roi: '$22.8K' },
 ]
 
 const platformColors = {
@@ -138,6 +140,7 @@ const notifications = [
 ]
 
 const notifColors = { review: C.amber, schedule: C.green, gap: C.red, csv: C.accent, published: C.cyan }
+const notifIcons = { review: Eye, schedule: Calendar, gap: AlertCircle, csv: Upload, published: CheckCircle }
 
 const connectedPlatforms = [
   { name: 'Instagram',   connected: true,  color: '#E1306C', icon: Camera      },
@@ -198,15 +201,17 @@ const Card = ({ children, style = {}, onClick }) => {
   return (
     <div
       onClick={onClick}
-      onMouseEnter={() => onClick && setHovered(true)}
-      onMouseLeave={() => onClick && setHovered(false)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        background: C.surface,
-        border: `1px solid ${hovered ? C.accent : C.border}`,
+        background: hovered && onClick ? C.surfaceHover : C.surface,
+        border: `1px solid ${hovered ? (onClick ? C.accent : C.borderLight) : C.border}`,
         borderRadius: 10,
         padding: 20,
-        transition: 'border-color 0.15s',
+        transition: 'all 0.2s ease',
         cursor: onClick ? 'pointer' : 'default',
+        transform: hovered && onClick ? 'translateY(-1px)' : 'translateY(0)',
+        boxShadow: hovered && onClick ? '0 4px 16px rgba(0,0,0,0.2)' : 'none',
         ...style,
       }}
     >
@@ -244,22 +249,28 @@ const StatCard = ({ label, value, sub, color = C.t1, icon: Icon }) => (
   </Card>
 )
 
-const Pill = ({ active, children, onClick, color = C.accent }) => (
-  <button
-    onClick={onClick}
-    style={{
-      padding: '5px 14px', borderRadius: 20,
-      border: `1px solid ${active ? color : C.border}`,
-      background: active ? `${color}20` : 'transparent',
-      color: active ? color : C.t3,
-      cursor: 'pointer', fontSize: 12,
-      fontWeight: active ? 600 : 400,
-      whiteSpace: 'nowrap',
-    }}
-  >
-    {children}
-  </button>
-)
+const Pill = ({ active, children, onClick, color = C.accent }) => {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '5px 14px', borderRadius: 20,
+        border: `1px solid ${active ? color : hovered ? C.borderLight : C.border}`,
+        background: active ? `${color}20` : hovered ? `${C.t3}12` : 'transparent',
+        color: active ? color : hovered ? C.t1 : C.t3,
+        cursor: 'pointer', fontSize: 12,
+        fontWeight: active ? 600 : 400,
+        whiteSpace: 'nowrap',
+        transition: 'all 0.15s ease',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
 
 const TabBar = ({ tabs, active, onChange }) => (
   <div style={{ display: 'flex', gap: 2, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: 4, width: 'fit-content' }}>
@@ -340,6 +351,29 @@ const navItems = [
   { id: 'library',      label: 'Library',      icon: BookOpen        },
 ]
 
+const NavItem = ({ item, isActive, onClick }) => {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+        padding: '9px 12px', borderRadius: 8, border: 'none',
+        background: isActive ? C.accentGlow : hovered ? `${C.t3}15` : 'transparent',
+        color: isActive ? C.accent : hovered ? C.t1 : C.t2,
+        cursor: 'pointer', marginBottom: 2,
+        fontWeight: isActive ? 600 : 400, fontSize: 14, textAlign: 'left',
+        transition: 'all 0.15s ease',
+      }}
+    >
+      <item.icon size={16} />
+      {item.label}
+    </button>
+  )
+}
+
 const Sidebar = ({ active, onNav }) => (
   <div style={{
     width: 240, minWidth: 240,
@@ -385,27 +419,9 @@ const Sidebar = ({ active, onNav }) => (
 
     {/* Nav */}
     <nav style={{ flex: 1, padding: '12px 10px 0' }}>
-      {navItems.map(item => {
-        const isActive = active === item.id
-        return (
-          <button
-            key={item.id}
-            onClick={() => onNav(item.id)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-              padding: '9px 12px', borderRadius: 8, border: 'none',
-              background: isActive ? C.accentGlow : 'transparent',
-              color: isActive ? C.accent : C.t2,
-              cursor: 'pointer', marginBottom: 2,
-              fontWeight: isActive ? 600 : 400, fontSize: 14, textAlign: 'left',
-              transition: 'all 0.1s',
-            }}
-          >
-            <item.icon size={16} />
-            {item.label}
-          </button>
-        )
-      })}
+      {navItems.map(item => (
+        <NavItem key={item.id} item={item} isActive={active === item.id} onClick={() => onNav(item.id)} />
+      ))}
     </nav>
 
     {/* User */}
@@ -507,24 +523,35 @@ const TopBar = ({ section, showNotifs, setShowNotifs }) => {
                 </button>
               </div>
               <div style={{ maxHeight: 340, overflowY: 'auto' }}>
-                {notifications.map(n => (
-                  <div
-                    key={n.id}
-                    style={{
-                      padding: '12px 16px', borderBottom: `1px solid ${C.border}`,
-                      borderLeft: `3px solid ${notifColors[n.type]}`,
-                      background: n.unread ? `${notifColors[n.type]}08` : 'transparent',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                      {n.unread && <span style={{ width: 6, height: 6, borderRadius: '50%', background: notifColors[n.type], flexShrink: 0 }} />}
-                      <span style={{ fontSize: 13, fontWeight: n.unread ? 600 : 400, color: C.t1 }}>{n.title}</span>
+                {notifications.map(n => {
+                  const NIcon = notifIcons[n.type] || Bell
+                  return (
+                    <div
+                      key={n.id}
+                      style={{
+                        padding: '12px 16px', borderBottom: `1px solid ${C.border}`,
+                        borderLeft: `3px solid ${notifColors[n.type]}`,
+                        background: n.unread ? `${notifColors[n.type]}08` : 'transparent',
+                        cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'flex-start',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = `${notifColors[n.type]}14`}
+                      onMouseLeave={e => e.currentTarget.style.background = n.unread ? `${notifColors[n.type]}08` : 'transparent'}
+                    >
+                      <div style={{ width: 28, height: 28, borderRadius: 7, background: `${notifColors[n.type]}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                        <NIcon size={13} color={notifColors[n.type]} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                          <span style={{ fontSize: 13, fontWeight: n.unread ? 600 : 400, color: C.t1 }}>{n.title}</span>
+                          {n.unread && <span style={{ width: 6, height: 6, borderRadius: '50%', background: notifColors[n.type], flexShrink: 0 }} />}
+                        </div>
+                        <div style={{ fontSize: 12, color: C.t2, marginBottom: 3 }}>{n.desc}</div>
+                        <div style={{ fontSize: 11, color: C.t3 }}>{n.time}</div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: C.t2, marginBottom: 3, paddingLeft: n.unread ? 14 : 0 }}>{n.desc}</div>
-                    <div style={{ fontSize: 11, color: C.t3, paddingLeft: n.unread ? 14 : 0 }}>{n.time}</div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -1280,27 +1307,46 @@ const DistributionView = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
               {cells.map((day, i) => {
                 const events = day ? calendarEvents.filter(e => e.day === day) : []
+                const colIndex = i % 7
+                const isWeekend = colIndex >= 5
+                const isToday = day === 1
                 return (
                   <div key={i} style={{
-                    minHeight: 80, padding: '4px 6px',
+                    minHeight: 100, padding: '6px 6px',
                     borderRight: (i + 1) % 7 !== 0 ? `1px solid ${C.border}` : 'none',
                     borderBottom: i < cells.length - 7 ? `1px solid ${C.border}` : 'none',
-                    background: day ? 'transparent' : `${C.bg}`,
+                    background: !day ? C.bg : isWeekend ? `${C.bg}80` : 'transparent',
                   }}>
                     {day && (
                       <>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: C.t2, marginBottom: 4 }}>{day}</div>
+                        <div style={{
+                          fontSize: 12, fontWeight: isToday ? 700 : 500,
+                          color: isToday ? C.accent : C.t2, marginBottom: 6,
+                          display: 'flex', alignItems: 'center', gap: 4,
+                        }}>
+                          {isToday ? (
+                            <span style={{
+                              width: 22, height: 22, borderRadius: '50%', background: C.accent,
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              color: 'white', fontSize: 11, fontWeight: 700,
+                            }}>
+                              {day}
+                            </span>
+                          ) : day}
+                        </div>
                         {events.map((ev, j) => (
                           <div
                             key={j}
                             onClick={() => setScheduleTarget(ev)}
                             style={{
-                              padding: '2px 6px', borderRadius: 4, marginBottom: 2,
+                              padding: '3px 6px', borderRadius: 4, marginBottom: 3,
                               background: `${ev.color}22`, borderLeft: `3px solid ${ev.color}`,
                               fontSize: 10, fontWeight: 600, color: ev.color,
                               cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
+                              whiteSpace: 'nowrap', transition: 'background 0.15s',
                             }}
+                            onMouseEnter={e => e.currentTarget.style.background = `${ev.color}40`}
+                            onMouseLeave={e => e.currentTarget.style.background = `${ev.color}22`}
                           >
                             {ev.title}
                           </div>
@@ -1325,27 +1371,44 @@ const DistributionView = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {readyToPublish.map((item, i) => (
                 <Card key={i}>
-                  <div style={{ display: 'flex', gap: 14 }}>
-                    <div style={{ width: 100, height: 64, borderRadius: 7, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, flexShrink: 0 }}>
-                      <Play size={22} color={C.t3} />
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <div style={{ width: 112, height: 70, borderRadius: 8, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, flexShrink: 0 }}>
+                      <Play size={26} color={C.t3} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.t1, marginBottom: 4 }}>{item.title}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                        <Badge color={C.accent}>{item.type}</Badge>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: C.t1, marginBottom: 4 }}>{item.title}</div>
+                          <Badge color={C.accent}>{item.type}</Badge>
+                        </div>
+                        <button
+                          onClick={() => setScheduleTarget({ title: item.title, platform: item.recommended[0], color: platformColors[item.recommended[0]] || C.accent })}
+                          style={{ background: C.accent, color: 'white', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', flexShrink: 0 }}
+                        >
+                          Schedule Now
+                        </button>
                       </div>
-                      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                        {item.recommended.map((p, j) => (
-                          <span key={j} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 14, background: `${platformColors[p] || C.accent}22`, color: platformColors[p] || C.accent, fontWeight: 600 }}>{p}</span>
-                        ))}
+                      <div style={{ display: 'flex', gap: 24 }}>
+                        <div>
+                          <div style={{ fontSize: 11, color: C.green, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Recommended</div>
+                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                            {item.recommended.map((p, j) => (
+                              <span key={j} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: `${platformColors[p] || C.accent}22`, color: platformColors[p] || C.accent, fontWeight: 600, border: `1px solid ${platformColors[p] || C.accent}44` }}>{p}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{ width: 1, background: C.border }} />
+                        <div>
+                          <div style={{ fontSize: 11, color: C.red, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Not Recommended</div>
+                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                            {item.notRecommended.map((p, j) => (
+                              <span key={j} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: `${C.red}12`, color: C.t3, fontWeight: 500 }}>{p}</span>
+                            ))}
+                          </div>
+                        </div>
                       </div>
+                      <div style={{ marginTop: 8, fontSize: 12, color: C.t3, fontStyle: 'italic' }}>AI: {item.reason}</div>
                     </div>
-                    <button
-                      onClick={() => setScheduleTarget({ title: item.title, platform: item.recommended[0], color: platformColors[item.recommended[0]] || C.accent })}
-                      style={{ background: C.accent, color: 'white', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13, alignSelf: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}
-                    >
-                      Schedule Now
-                    </button>
                   </div>
                 </Card>
               ))}
@@ -1383,11 +1446,16 @@ const DistributionView = () => {
 
         {/* Schedule Drawer overlay */}
         {scheduleTarget && (
+          <>
+          <div
+            onClick={() => setScheduleTarget(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 49 }}
+          />
           <div style={{
-            position: 'absolute', right: 0, top: 0, bottom: 0, width: 380,
+            position: 'fixed', right: 0, top: 0, bottom: 0, width: 400,
             background: C.surface, borderLeft: `1px solid ${C.border}`,
-            boxShadow: '-8px 0 30px rgba(0,0,0,0.4)', zIndex: 50,
-            display: 'flex', flexDirection: 'column', overflow: 'auto',
+            boxShadow: '-12px 0 40px rgba(0,0,0,0.5)', zIndex: 50,
+            display: 'flex', flexDirection: 'column', overflowY: 'auto',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: `1px solid ${C.border}` }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>Schedule Post</span>
@@ -1474,6 +1542,7 @@ const DistributionView = () => {
               </div>
             </div>
           </div>
+          </>
         )}
       </div>
     </div>
@@ -1792,7 +1861,7 @@ const ROITab = ({ onShowAttribution }) => (
 
 const PerVideoTab = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-    {finalVideos.slice(0, 4).map((v, i) => (
+    {finalVideos.map((v, i) => (
       <Card key={i} onClick={() => {}}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 88, height: 56, borderRadius: 7, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, flexShrink: 0 }}>
@@ -1974,8 +2043,8 @@ const LibraryView = ({ view, onViewChange }) => (
                     <Eye size={11} /><span>{item.views.toLocaleString()}</span>
                   </div>
                 </div>
-                <button style={{ width: '100%', padding: '7px 0', background: C.accentGlow, border: `1px solid ${C.accent}40`, borderRadius: 7, color: C.accent, cursor: 'pointer', fontWeight: 600, fontSize: 12 }}>
-                  Request for My Location
+                <button style={{ width: '100%', padding: '7px 0', background: C.accentGlow, border: `1px solid ${C.accent}40`, borderRadius: 7, color: C.accent, cursor: 'pointer', fontWeight: 600, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Download size={12} /> Request Copy
                 </button>
               </div>
             </Card>
@@ -1998,7 +2067,7 @@ const LibraryView = ({ view, onViewChange }) => (
         </div>
 
         {/* Light-themed preview */}
-        <div style={{ background: '#f8fafc', borderRadius: 12, padding: 24, border: `1px solid ${C.border}` }}>
+        <div style={{ background: '#f8fafc', borderRadius: 12, padding: 28, border: `1px solid ${C.borderLight}`, boxShadow: 'inset 0 2px 20px rgba(255,255,255,0.04), 0 0 0 1px rgba(255,255,255,0.06)' }}>
           {/* Simulated search */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'white', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
             <Search size={16} color="#94a3b8" />
