@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, createContext, useContext } from "react"
 import {
   LayoutDashboard, Film, Send, BarChart2, BookOpen,
   Plus, Search, Bell, Play, Upload, Calendar, Clock,
@@ -39,6 +39,10 @@ const C = {
   t2:           '#94a3b8',
   t3:           '#4b5f7a',
 }
+
+// ─── Mobile Context ──────────────────────────────────────────────────────────
+const MobileCtx = createContext(false)
+const useM = () => useContext(MobileCtx)
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const productionData = [
@@ -272,25 +276,28 @@ const Pill = ({ active, children, onClick, color = C.accent }) => {
   )
 }
 
-const TabBar = ({ tabs, active, onChange }) => (
-  <div style={{ display: 'flex', gap: 2, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: 4, width: 'fit-content' }}>
-    {tabs.map(t => (
-      <button
-        key={t.id}
-        onClick={() => onChange(t.id)}
-        style={{
-          padding: '6px 18px', borderRadius: 7, border: 'none', cursor: 'pointer',
-          fontSize: 13, fontWeight: active === t.id ? 600 : 400,
-          background: active === t.id ? C.accent : 'transparent',
-          color: active === t.id ? 'white' : C.t2,
-          transition: 'all 0.1s',
-        }}
-      >
-        {t.label}
-      </button>
-    ))}
-  </div>
-)
+const TabBar = ({ tabs, active, onChange }) => {
+  const m = useM()
+  return (
+    <div style={{ display: 'flex', gap: 2, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: 4, width: m ? '100%' : 'fit-content', overflowX: m ? 'auto' : 'visible', flexShrink: 0 }}>
+      {tabs.map(t => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          style={{
+            padding: m ? '6px 12px' : '6px 18px', borderRadius: 7, border: 'none', cursor: 'pointer',
+            fontSize: m ? 12 : 13, fontWeight: active === t.id ? 600 : 400,
+            background: active === t.id ? C.accent : 'transparent',
+            color: active === t.id ? 'white' : C.t2,
+            transition: 'all 0.1s', whiteSpace: 'nowrap', flex: m ? 1 : 'none',
+          }}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+}
 
 const VideoThumbnail = ({ aspectRatio = '16/9', size = 28 }) => {
   const [hovered, setHovered] = useState(false)
@@ -320,27 +327,30 @@ const VideoThumbnail = ({ aspectRatio = '16/9', size = 28 }) => {
 }
 
 // ─── Modal Overlay ───────────────────────────────────────────────────────────
-const ModalOverlay = ({ children, onClose, width = 500 }) => (
-  <div
-    onClick={onClose}
-    style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0,0,0,0.6)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center',
-    }}
-  >
+const ModalOverlay = ({ children, onClose, width = 500 }) => {
+  const m = useM()
+  return (
     <div
-      onClick={e => e.stopPropagation()}
+      onClick={onClose}
       style={{
-        width, maxHeight: '85vh', overflowY: 'auto',
-        background: C.surface, border: `1px solid ${C.border}`,
-        borderRadius: 14, padding: 28,
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.6)', display: 'flex',
+        alignItems: m ? 'flex-end' : 'center', justifyContent: 'center',
       }}
     >
-      {children}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: m ? '100%' : width, maxHeight: m ? '90vh' : '85vh', overflowY: 'auto',
+          background: C.surface, border: `1px solid ${C.border}`,
+          borderRadius: m ? '16px 16px 0 0' : 14, padding: m ? 20 : 28,
+        }}
+      >
+        {children}
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 const navItems = [
@@ -374,72 +384,108 @@ const NavItem = ({ item, isActive, onClick }) => {
   )
 }
 
-const Sidebar = ({ active, onNav }) => (
-  <div style={{
-    width: 240, minWidth: 240,
-    background: C.sidebar,
-    borderRight: `1px solid ${C.border}`,
-    display: 'flex', flexDirection: 'column',
-    height: '100vh',
-  }}>
-    {/* Logo */}
-    <div style={{ padding: '20px 20px 20px', borderBottom: `1px solid ${C.border}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 34, height: 34, borderRadius: 9, background: C.accent,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 800, fontSize: 15, color: 'white', letterSpacing: '-0.03em',
-        }}>C</div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: C.t1, letterSpacing: '-0.01em' }}>Cyrano</div>
-          <div style={{ fontSize: 11, color: C.t3 }}>MarOps Platform</div>
-        </div>
-      </div>
-    </div>
+const Sidebar = ({ active, onNav }) => {
+  const m = useM()
 
-    {/* Org Switcher */}
-    <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}` }}>
-      <button style={{
-        width: '100%', background: C.surface, border: `1px solid ${C.border}`,
-        borderRadius: 8, padding: '8px 12px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        cursor: 'pointer', color: C.t1,
+  if (m) {
+    return (
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        height: 60, background: C.sidebar,
+        borderTop: `1px solid ${C.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+        zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {navItems.map(item => {
+          const isActive = active === item.id
+          return (
+            <button
+              key={item.id}
+              onClick={() => onNav(item.id)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: isActive ? C.accent : C.t3,
+                padding: '6px 12px', borderRadius: 8,
+                transition: 'color 0.15s',
+              }}
+            >
+              <item.icon size={20} />
+              <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 400 }}>{item.label.split(' ')[0]}</span>
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      width: 240, minWidth: 240,
+      background: C.sidebar,
+      borderRight: `1px solid ${C.border}`,
+      display: 'flex', flexDirection: 'column',
+      height: '100vh',
+    }}>
+      {/* Logo */}
+      <div style={{ padding: '20px 20px 20px', borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 22, height: 22, borderRadius: 5, background: C.green,
+            width: 34, height: 34, borderRadius: 9, background: C.accent,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 700, color: 'white',
-          }}>M</div>
-          <span style={{ fontSize: 13, fontWeight: 500 }}>Mercy Health System</span>
+            fontWeight: 800, fontSize: 15, color: 'white', letterSpacing: '-0.03em',
+          }}>C</div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: C.t1, letterSpacing: '-0.01em' }}>Cyrano</div>
+            <div style={{ fontSize: 11, color: C.t3 }}>MarOps Platform</div>
+          </div>
         </div>
-        <ChevronDown size={13} color={C.t3} />
-      </button>
-    </div>
+      </div>
 
-    {/* Nav */}
-    <nav style={{ flex: 1, padding: '12px 10px 0' }}>
-      {navItems.map(item => (
-        <NavItem key={item.id} item={item} isActive={active === item.id} onClick={() => onNav(item.id)} />
-      ))}
-    </nav>
+      {/* Org Switcher */}
+      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}` }}>
+        <button style={{
+          width: '100%', background: C.surface, border: `1px solid ${C.border}`,
+          borderRadius: 8, padding: '8px 12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', color: C.t1,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: 5, background: C.green,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 700, color: 'white',
+            }}>M</div>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>Mercy Health System</span>
+          </div>
+          <ChevronDown size={13} color={C.t3} />
+        </button>
+      </div>
 
-    {/* User */}
-    <div style={{ padding: '14px 16px', borderTop: `1px solid ${C.border}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 30, height: 30, borderRadius: '50%', background: C.accent,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
-        }}>JR</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: C.t1 }}>Jamie Rivera</div>
-          <div style={{ fontSize: 11, color: C.t3 }}>Marketing Director</div>
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: '12px 10px 0' }}>
+        {navItems.map(item => (
+          <NavItem key={item.id} item={item} isActive={active === item.id} onClick={() => onNav(item.id)} />
+        ))}
+      </nav>
+
+      {/* User */}
+      <div style={{ padding: '14px 16px', borderTop: `1px solid ${C.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 30, height: 30, borderRadius: '50%', background: C.accent,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
+          }}>JR</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: C.t1 }}>Jamie Rivera</div>
+            <div style={{ fontSize: 11, color: C.t3 }}>Marketing Director</div>
+          </div>
+          <Settings size={14} color={C.t3} style={{ cursor: 'pointer' }} />
         </div>
-        <Settings size={14} color={C.t3} style={{ cursor: 'pointer' }} />
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 // ─── Top Bar ──────────────────────────────────────────────────────────────────
 const sectionMeta = {
@@ -451,6 +497,7 @@ const sectionMeta = {
 }
 
 const TopBar = ({ section, showNotifs, setShowNotifs }) => {
+  const m = useM()
   const meta = sectionMeta[section] || {}
   const bellRef = useRef(null)
   const dropdownRef = useRef(null)
@@ -471,17 +518,17 @@ const TopBar = ({ section, showNotifs, setShowNotifs }) => {
 
   return (
     <div style={{
-      height: 58, display: 'flex', alignItems: 'center',
-      padding: '0 24px', borderBottom: `1px solid ${C.border}`, gap: 16,
-      background: C.bg,
+      height: m ? 50 : 58, display: 'flex', alignItems: 'center',
+      padding: m ? '0 16px' : '0 24px', borderBottom: `1px solid ${C.border}`, gap: m ? 10 : 16,
+      background: C.bg, flexShrink: 0,
     }}>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 15, fontWeight: 600, color: C.t1 }}>{meta.title}</span>
-        <ChevronRight size={13} color={C.t3} />
-        <span style={{ fontSize: 13, color: C.t3 }}>{meta.sub}</span>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <span style={{ fontSize: m ? 14 : 15, fontWeight: 600, color: C.t1 }}>{meta.title}</span>
+        {!m && <ChevronRight size={13} color={C.t3} />}
+        {!m && <span style={{ fontSize: 13, color: C.t3 }}>{meta.sub}</span>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{
+        {!m && <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
           background: C.surface, border: `1px solid ${C.border}`,
           borderRadius: 8, padding: '6px 12px', fontSize: 13, color: C.t3,
@@ -489,7 +536,7 @@ const TopBar = ({ section, showNotifs, setShowNotifs }) => {
         }}>
           <Search size={13} />
           <span>Search…</span>
-        </div>
+        </div>}
         <div style={{ position: 'relative' }}>
           <button
             ref={bellRef}
@@ -562,17 +609,19 @@ const TopBar = ({ section, showNotifs, setShowNotifs }) => {
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-const DashboardView = ({ onNavigate }) => (
+const DashboardView = ({ onNavigate }) => {
+  const m = useM()
+  return (
   <div style={{ maxWidth: 1160 }}>
 
     {/* Welcome */}
-    <div style={{ marginBottom: 24 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 600, color: C.t1, margin: 0 }}>Good morning, Jamie 👋</h2>
-      <p style={{ fontSize: 14, color: C.t2, margin: '4px 0 0' }}>Content program overview — March 2026</p>
+    <div style={{ marginBottom: m ? 16 : 24 }}>
+      <h2 style={{ fontSize: m ? 17 : 20, fontWeight: 600, color: C.t1, margin: 0 }}>Good morning, Jamie 👋</h2>
+      <p style={{ fontSize: m ? 13 : 14, color: C.t2, margin: '4px 0 0' }}>Content program overview — March 2026</p>
     </div>
 
     {/* KPI row */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: m ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: m ? 10 : 16, marginBottom: m ? 16 : 24 }}>
       <StatCard label="Videos Published"  value="48"     sub="↑ 6 vs. last month"   color={C.accent} icon={Video}       />
       <StatCard label="Scheduled Posts"   value="12"     sub="Next: Apr 3"           color={C.green}  icon={Calendar}    />
       <StatCard label="Est. ROI Impact"   value="$189K"  sub="YTD attribution"       color={C.amber}  icon={DollarSign}  />
@@ -580,7 +629,7 @@ const DashboardView = ({ onNavigate }) => (
     </div>
 
     {/* Charts */}
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : '1fr 1fr', gap: m ? 10 : 16, marginBottom: m ? 16 : 24 }}>
       <Card>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.t1, marginBottom: 2 }}>Video Production</div>
         <div style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Monthly output — last 6 months</div>
@@ -616,7 +665,7 @@ const DashboardView = ({ onNavigate }) => (
     </div>
 
     {/* Content Gaps + In Progress */}
-    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : '1.4fr 1fr', gap: m ? 10 : 16 }}>
 
       {/* Gaps */}
       <Card>
@@ -677,7 +726,8 @@ const DashboardView = ({ onNavigate }) => (
 
     </div>
   </div>
-)
+  )
+}
 
 // ─── Creation — extra mock data ──────────────────────────────────────────────
 const projectGroups = {
@@ -891,6 +941,7 @@ const ProjectsTab = ({ onSelect }) => (
 
 // ─── Project Detail View ──────────────────────────────────────────────────────
 const ProjectDetailView = ({ project, onBack }) => {
+  const m = useM()
   const [activePanel, setActivePanel] = useState('comments')
   const [commentText, setCommentText] = useState('')
   const sc = statusConfig[project.status] || statusConfig.draft
@@ -924,7 +975,7 @@ const ProjectDetailView = ({ project, onBack }) => {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : '1fr 360px', gap: 16, alignItems: 'start' }}>
 
         {/* Left: Video + Storyboard + Outputs */}
         <div>
@@ -1260,6 +1311,7 @@ const NewProjectTab = ({ step, onStepChange }) => (
 
 // ─── Distribution ─────────────────────────────────────────────────────────────
 const DistributionView = () => {
+  const m = useM()
   const [scheduleTarget, setScheduleTarget] = useState(null)
   const [calMonth] = useState('April 2026')
   const [autoCaptions, setAutoCaptions] = useState(true)
@@ -1276,7 +1328,7 @@ const DistributionView = () => {
 
   return (
     <div style={{ maxWidth: 1160 }}>
-      <div style={{ display: 'flex', gap: 16, position: 'relative' }}>
+      <div style={{ display: 'flex', flexDirection: m ? 'column' : 'row', gap: 16, position: 'relative' }}>
 
         {/* Main calendar area */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1312,7 +1364,7 @@ const DistributionView = () => {
                 const isToday = day === 1
                 return (
                   <div key={i} style={{
-                    minHeight: 100, padding: '6px 6px',
+                    minHeight: m ? 52 : 100, padding: m ? '3px 3px' : '6px 6px',
                     borderRight: (i + 1) % 7 !== 0 ? `1px solid ${C.border}` : 'none',
                     borderBottom: i < cells.length - 7 ? `1px solid ${C.border}` : 'none',
                     background: !day ? C.bg : isWeekend ? `${C.bg}80` : 'transparent',
@@ -1320,21 +1372,32 @@ const DistributionView = () => {
                     {day && (
                       <>
                         <div style={{
-                          fontSize: 12, fontWeight: isToday ? 700 : 500,
-                          color: isToday ? C.accent : C.t2, marginBottom: 6,
+                          fontSize: m ? 11 : 12, fontWeight: isToday ? 700 : 500,
+                          color: isToday ? C.accent : C.t2, marginBottom: m ? 3 : 6,
                           display: 'flex', alignItems: 'center', gap: 4,
                         }}>
                           {isToday ? (
                             <span style={{
-                              width: 22, height: 22, borderRadius: '50%', background: C.accent,
+                              width: m ? 18 : 22, height: m ? 18 : 22, borderRadius: '50%', background: C.accent,
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              color: 'white', fontSize: 11, fontWeight: 700,
+                              color: 'white', fontSize: m ? 10 : 11, fontWeight: 700,
                             }}>
                               {day}
                             </span>
                           ) : day}
                         </div>
-                        {events.map((ev, j) => (
+                        {m ? (
+                          events.length > 0 && (
+                            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                              {events.map((ev, j) => (
+                                <span key={j} onClick={() => setScheduleTarget(ev)} style={{
+                                  width: 7, height: 7, borderRadius: '50%', background: ev.color,
+                                  cursor: 'pointer', display: 'inline-block',
+                                }} />
+                              ))}
+                            </div>
+                          )
+                        ) : events.map((ev, j) => (
                           <div
                             key={j}
                             onClick={() => setScheduleTarget(ev)}
@@ -1417,7 +1480,7 @@ const DistributionView = () => {
         </div>
 
         {/* Connected Platforms sidebar */}
-        <div style={{ width: 240, flexShrink: 0 }}>
+        <div style={{ width: m ? '100%' : 240, flexShrink: 0 }}>
           <Card>
             <div style={{ fontSize: 14, fontWeight: 600, color: C.t1, marginBottom: 4 }}>Connected Platforms</div>
             <div style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Manage your integrations</div>
@@ -1452,7 +1515,7 @@ const DistributionView = () => {
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 49 }}
           />
           <div style={{
-            position: 'fixed', right: 0, top: 0, bottom: 0, width: 400,
+            position: 'fixed', right: 0, top: 0, bottom: 0, width: m ? '100%' : 400,
             background: C.surface, borderLeft: `1px solid ${C.border}`,
             boxShadow: '-12px 0 40px rgba(0,0,0,0.5)', zIndex: 50,
             display: 'flex', flexDirection: 'column', overflowY: 'auto',
@@ -1551,12 +1614,13 @@ const DistributionView = () => {
 
 // ─── Results ──────────────────────────────────────────────────────────────────
 const ResultsView = ({ tab, onTabChange }) => {
+  const m = useM()
   const [showExport, setShowExport] = useState(false)
   const [showAttribution, setShowAttribution] = useState(false)
 
   return (
     <div style={{ maxWidth: 1160 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', flexDirection: m ? 'column' : 'row', alignItems: m ? 'stretch' : 'center', justifyContent: 'space-between', marginBottom: m ? 16 : 24, gap: m ? 10 : 0 }}>
         <TabBar
           tabs={[
             { id: 'overview',  label: 'Overview'        },
@@ -1568,7 +1632,7 @@ const ResultsView = ({ tab, onTabChange }) => {
         />
         <button
           onClick={() => setShowExport(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 16px', background: C.accent, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '8px 16px', background: C.accent, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
         >
           <Download size={14} /> Export Report
         </button>
@@ -1701,16 +1765,18 @@ const ResultsView = ({ tab, onTabChange }) => {
   )
 }
 
-const ResultsOverview = () => (
+const ResultsOverview = () => {
+  const m = useM()
+  return (
   <div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: m ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: m ? 10 : 16, marginBottom: m ? 16 : 24 }}>
       <StatCard label="Total Views"       value="124K"  sub="↑ 18% vs. last month"  color={C.accent}  icon={Eye}        />
       <StatCard label="Avg. Watch Time"   value="72%"   sub="↑ 4 pts vs. last month" color={C.green}   icon={Activity}   />
       <StatCard label="Booking Clicks"    value="1,847" sub="4.8% avg CTR"           color={C.amber}   icon={Target}     />
       <StatCard label="Est. New Patients" value="312"   sub="From video attribution" color={C.purple}  icon={Users}      />
     </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : 'repeat(3, 1fr)', gap: m ? 10 : 16 }}>
       {[
         { label: 'Testimonials',      views: '52,400', ctr: '8.9%', icon: Heart,     color: C.pink   },
         { label: 'Physician Bios',    views: '38,100', ctr: '6.2%', icon: Users,     color: C.accent },
@@ -1737,15 +1803,18 @@ const ResultsOverview = () => (
       ))}
     </div>
   </div>
-)
+  )
+}
 
 const journeyColors = [C.green, '#22c55e', '#34d399', C.accent, C.accentLight, C.amber, '#f59e0b']
 
-const ROITab = ({ onShowAttribution }) => (
+const ROITab = ({ onShowAttribution }) => {
+  const m = useM()
+  return (
   <div>
     {/* Summary card */}
     <Card style={{ marginBottom: 16, borderColor: `${C.green}44` }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
+      <div style={{ display: 'flex', flexDirection: m ? 'column' : 'row', alignItems: m ? 'stretch' : 'flex-start', justifyContent: 'space-between', gap: m ? 16 : 24 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
             <span style={{ fontSize: 16, fontWeight: 600, color: C.t1 }}>Year-to-Date ROI Attribution</span>
@@ -1754,10 +1823,10 @@ const ROITab = ({ onShowAttribution }) => (
             </button>
           </div>
           <div style={{ fontSize: 13, color: C.t2, marginBottom: 20 }}>Based on patient starts matched to video touchpoints + no-show reduction impact</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 28 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr 1fr' : 'repeat(3, 1fr)', gap: m ? 16 : 28 }}>
             <div>
               <div style={{ fontSize: 11, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Est. New Patients</div>
-              <div style={{ fontSize: 36, fontWeight: 800, color: C.green, letterSpacing: '-0.03em' }}>312</div>
+              <div style={{ fontSize: m ? 28 : 36, fontWeight: 800, color: C.green, letterSpacing: '-0.03em' }}>312</div>
               <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>Matched to video touchpoints</div>
             </div>
             <div>
@@ -1784,7 +1853,8 @@ const ROITab = ({ onShowAttribution }) => (
     <Card style={{ marginBottom: 16 }}>
       <div style={{ fontSize: 14, fontWeight: 600, color: C.t1, marginBottom: 4 }}>Clinical Care Journey</div>
       <div style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>ROI attribution across 7 stages of the patient journey</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <div style={{ overflowX: m ? 'auto' : 'visible' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, minWidth: m ? 580 : 'auto' }}>
         {/* Header */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 80px 80px 90px', gap: 8, padding: '8px 12px', borderBottom: `1px solid ${C.border}` }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stage</span>
@@ -1815,13 +1885,15 @@ const ROITab = ({ onShowAttribution }) => (
           <span style={{ fontSize: 13, fontWeight: 800, color: C.green, textAlign: 'right' }}>$189.2K</span>
         </div>
       </div>
+      </div>
     </Card>
 
     {/* Talent & Culture */}
     <Card>
       <div style={{ fontSize: 14, fontWeight: 600, color: C.t1, marginBottom: 4 }}>Talent & Culture</div>
       <div style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Recruitment, onboarding, and retention video impact</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <div style={{ overflowX: m ? 'auto' : 'visible' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, minWidth: m ? 580 : 'auto' }}>
         {/* Header */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 80px 80px 90px', gap: 8, padding: '8px 12px', borderBottom: `1px solid ${C.border}` }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stage</span>
@@ -1855,9 +1927,11 @@ const ROITab = ({ onShowAttribution }) => (
           <span style={{ fontSize: 13, fontWeight: 800, color: C.amber, textAlign: 'right' }}>$68.6K</span>
         </div>
       </div>
+      </div>
     </Card>
   </div>
-)
+  )
+}
 
 const PerVideoTab = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1896,9 +1970,11 @@ const PerVideoTab = () => (
 )
 
 // ─── Library ──────────────────────────────────────────────────────────────────
-const LibraryView = ({ view, onViewChange }) => (
+const LibraryView = ({ view, onViewChange }) => {
+  const m = useM()
+  return (
   <div style={{ maxWidth: 1160 }}>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+    <div style={{ display: 'flex', flexDirection: m ? 'column' : 'row', alignItems: m ? 'stretch' : 'center', justifyContent: 'space-between', marginBottom: 20, gap: m ? 10 : 0 }}>
       <TabBar
         tabs={[
           { id: 'videos', label: 'Final Videos'   },
@@ -1944,7 +2020,7 @@ const LibraryView = ({ view, onViewChange }) => (
             ))}
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: m ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: m ? 10 : 16 }}>
           {finalVideos.map((v, i) => (
             <Card key={i} style={{ padding: 0, overflow: 'hidden' }} onClick={() => {}}>
               <VideoThumbnail />
@@ -1976,7 +2052,7 @@ const LibraryView = ({ view, onViewChange }) => (
             <Pill key={i} active={i === 0} onClick={() => {}} color={i === 1 ? C.green : C.accent}>{tag}</Pill>
           ))}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: m ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: m ? 10 : 16 }}>
           {brollClips.map((clip, i) => (
             <Card key={i} style={{ padding: 0, overflow: 'hidden' }} onClick={() => {}}>
               <div style={{ width: '100%', aspectRatio: '16/9', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', borderBottom: `1px solid ${C.border}` }}>
@@ -2024,7 +2100,7 @@ const LibraryView = ({ view, onViewChange }) => (
             <Pill key={i} active={i === 0} onClick={() => {}} color={i === 0 ? C.accent : hospitalColors[h] || C.accent}>{h}</Pill>
           ))}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: m ? '1fr' : 'repeat(3, 1fr)', gap: m ? 10 : 16 }}>
           {systemFeedItems.map((item, i) => (
             <Card key={i} style={{ padding: 0, overflow: 'hidden' }}>
               <VideoThumbnail />
@@ -2088,7 +2164,7 @@ const LibraryView = ({ view, onViewChange }) => (
           </div>
 
           {/* Video cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: m ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: m ? 10 : 14 }}>
             {finalVideos.slice(0, 6).map((v, i) => (
               <div key={i} style={{ background: 'white', borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                 <div style={{ width: '100%', aspectRatio: '16/9', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2105,11 +2181,11 @@ const LibraryView = ({ view, onViewChange }) => (
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: C.accent, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+        <div style={{ display: 'flex', flexDirection: m ? 'column' : 'row', gap: 10, marginTop: 16 }}>
+          <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px', background: C.accent, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
             Customize Public Page →
           </button>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, color: C.t1, cursor: 'pointer', fontSize: 13 }}>
+          <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px', background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, color: C.t1, cursor: 'pointer', fontSize: 13 }}>
             <Copy size={14} /> Copy Public URL
           </button>
         </div>
@@ -2117,7 +2193,8 @@ const LibraryView = ({ view, onViewChange }) => (
     )}
 
   </div>
-)
+  )
+}
 
 // ─── App Root ─────────────────────────────────────────────────────────────────
 export default function CyranoMarOps() {
@@ -2126,18 +2203,26 @@ export default function CyranoMarOps() {
   const [creationTab,  setCreationTab]  = useState('projects')
   const [resultsTab,   setResultsTab]   = useState('overview')
   const [showNotifs,   setShowNotifs]   = useState(false)
+  const [isMobile,     setIsMobile]     = useState(typeof window !== 'undefined' && window.innerWidth < 768)
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
 
   return (
+    <MobileCtx.Provider value={isMobile}>
     <div style={{
-      display: 'flex', height: '100vh',
+      display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh',
       background: C.bg, color: C.t1,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
       overflow: 'hidden', fontSize: 14,
     }}>
-      <Sidebar active={section} onNav={setSection} />
+      {!isMobile && <Sidebar active={section} onNav={setSection} />}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
         <TopBar section={section} showNotifs={showNotifs} setShowNotifs={setShowNotifs} />
-        <div style={{ flex: 1, overflow: 'auto', padding: '24px 28px' }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: isMobile ? '16px 12px 80px' : '24px 28px' }}>
           {section === 'dashboard'    && <DashboardView onNavigate={setSection} />}
           {section === 'creation'     && <CreationView  tab={creationTab}  onTabChange={setCreationTab} />}
           {section === 'distribution' && <DistributionView />}
@@ -2145,6 +2230,8 @@ export default function CyranoMarOps() {
           {section === 'library'      && <LibraryView   view={libraryView} onViewChange={setLibraryView} />}
         </div>
       </div>
+      {isMobile && <Sidebar active={section} onNav={setSection} />}
     </div>
+    </MobileCtx.Provider>
   )
 }
